@@ -290,7 +290,9 @@ function tagadelic_get_weighted_tags($vids, $steps = 6, $size = 60) {
     if (!is_array($vids) || count($vids) == 0) {
       return array();
     }
-    $result = db_query_range(db_rewrite_sql('SELECT COUNT(*) AS count, td.tid, td.vid, td.name, td.description FROM {term_data} td INNER JOIN {term_node} tn ON td.tid = tn.tid INNER JOIN {node} n ON tn.vid = n.vid WHERE td.vid IN ('. db_placeholders($vids) .') AND n.status = 1 GROUP BY td.tid, td.vid, td.name, td.description HAVING COUNT(*) > 0 ORDER BY count DESC'), $vids, 0, $size);
+    $sql = db_rewrite_sql('SELECT COUNT(n.nid) AS count, tn.tid FROM ' . db_prefix_tables('{term_node}') . ' tn INNER JOIN {node} n ON tn.vid = n.vid WHERE n.status = 1 GROUP BY tn.tid HAVING count > 0');
+    $sql = db_rewrite_sql("SELECT count, t.tid, t.vid, t.name, t.description FROM {term_data} t INNER JOIN ($sql) tmp USING (tid) WHERE t.vid IN (". db_placeholders($vids) .") AND t.weight != 127 ORDER BY count DESC", 't', 'tid');
+    $result = db_query_range($sql, $vids, 0, $size);
 
     $tags = tagadelic_build_weighted_tags($result, $steps);
 
