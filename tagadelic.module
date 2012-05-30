@@ -290,6 +290,13 @@ function tagadelic_get_weighted_tags($vids, $steps = 6, $size = 60) {
     if (!is_array($vids) || count($vids) == 0) {
       return array();
     }
+    // On websites with a large number of nodes and tags joining these tables in
+    // their entirety can be very expensive. A subquery is used to reduce the
+    // number of rows in the join. This speeds up the query and lowers memory
+    // usage.
+    // The call to db_prefix_tables() is a workaround for a limitation in the
+    // i18ntaxonomy module which prevents SQL rewriting from taking place when
+    // {term_node} is used in a query. See i18ntaxonomy_db_rewrite_sql().
     $sql = db_rewrite_sql('SELECT COUNT(n.nid) AS count, tn.tid FROM ' . db_prefix_tables('{term_node}') . ' tn INNER JOIN {node} n ON tn.vid = n.vid WHERE n.status = 1 GROUP BY tn.tid HAVING count > 0');
     $sql = db_rewrite_sql("SELECT count, t.tid, t.vid, t.name, t.description FROM {term_data} t INNER JOIN ($sql) tmp USING (tid) WHERE t.vid IN (". db_placeholders($vids) .") AND t.weight != 127 ORDER BY count DESC", 't', 'tid');
     $result = db_query_range($sql, $vids, 0, $size);
